@@ -10,7 +10,7 @@
 #define COLOR_GRAY 0x0f0f0f0f
 #define LINE_WIDTH 1
 #define CELL_SIZE 20
-#define SIMULATION_SPEED 300
+#define SIMULATION_SPEED 100
 
 Uint32 CELL_COLOR = COLOR_WHITE;
 Uint32 GRID_COLOR = COLOR_GRAY;
@@ -46,12 +46,45 @@ int** make_grid(int rows, int cols) {
   return grid;
 }
 
-void backend_next_generation (int** grid, int rows, int cols) {
+int count_neighbours(int** grid, int rows, int cols, int y, int x) {
+  int alive = 0;
+
+  for (int i = y-1; i < y + 2; i++) {
+    for (int j = x-1; j < x + 2; j++) {
+      if (i == y && j == x) continue;
+      else if (i >= 0 && j >= 0 && i < rows && j < cols && grid[i][j]) alive++;
+    }
+  }
+
+  return alive;
+
+}
+void initialize_random_grid (int** grid, int rows, int cols) {
   for (int i = 0; i < rows; i++) {  
     for (int j = 0; j < cols; j++) grid[i][j] = rand() % 2;
   }
 }
 
+void backend_next_generation (int** grid, int rows, int cols) {
+  int **temp_grid = (int**)malloc(rows * sizeof(int*));
+  for(int i = 0; i < rows; i++) temp_grid[i] = (int*)malloc(cols * sizeof(int));
+
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      int neighbours_alive = count_neighbours(grid, rows, cols, i, j);
+      if (neighbours_alive < 2 || neighbours_alive > 3) temp_grid[i][j] = 0;
+      else if (neighbours_alive == 3) temp_grid[i][j] = 1;
+      else temp_grid[i][j] = grid[i][j];
+    }
+  }
+
+  for(int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) grid[i][j] = temp_grid[i][j];
+  }
+
+  for(int i = 0; i < rows; i++) free(temp_grid[i]);
+  free(temp_grid);
+}
 void draw_conveys_game_of_life (int** grid, int rows, int cols, SDL_Surface* surface) {
   for(int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
@@ -69,7 +102,7 @@ int main() {
     printf("Conway's Game of Life\n");
     SDL_Init(SDL_INIT_VIDEO);
 
-    char* title = "Convey's Game of Life";
+    char* title = "Conway's Game of Life";
     SDL_Window* main_window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT, 0);
     SDL_Surface* surface = SDL_GetWindowSurface(main_window);
     
@@ -78,6 +111,7 @@ int main() {
     
     int midX = cols/2, midY = rows/2;
     int** grid = make_grid(rows, cols);
+    initialize_random_grid(grid, rows, cols);
     
     int simulation_running = 1;
     SDL_Event event;
@@ -86,9 +120,9 @@ int main() {
       while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) simulation_running = 0;
       }
-      
-      backend_next_generation(grid, rows, cols);
+
       draw_conveys_game_of_life(grid, rows, cols, surface);
+      backend_next_generation(grid, rows, cols);
 
       SDL_UpdateWindowSurface(main_window);    
       SDL_Delay(SIMULATION_SPEED);

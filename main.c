@@ -1,16 +1,20 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_events.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define MAIN_WINDOW_WIDTH 900
 #define MAIN_WINDOW_HEIGHT 600
+#define COLOR_BLACK 0x00000000
 #define COLOR_WHITE 0xffffffff
 #define COLOR_GRAY 0x0f0f0f0f
 #define LINE_WIDTH 1
 #define CELL_SIZE 20
+#define SIMULATION_SPEED 300
 
 Uint32 CELL_COLOR = COLOR_WHITE;
 Uint32 GRID_COLOR = COLOR_GRAY;
+Uint32 CELL_BLACK = COLOR_BLACK;
 
 void draw_grid(SDL_Surface* surface, int cols, int rows) {
   for (int i = 0; i < rows; i++) {
@@ -24,12 +28,12 @@ void draw_grid(SDL_Surface* surface, int cols, int rows) {
   }
 }
 
-void draw_cell(SDL_Surface* surface, int cellX, int cellY) {
+void draw_cell(SDL_Surface* surface, int cellX, int cellY, Uint64 color) {
   int pixelX = cellX * CELL_SIZE + LINE_WIDTH, pixelY = cellY * CELL_SIZE + LINE_WIDTH;
   int CELL_IN_GRID_SIZE = CELL_SIZE - (2 * LINE_WIDTH);
 
   SDL_Rect cell = (SDL_Rect) {pixelX, pixelY, CELL_IN_GRID_SIZE, CELL_IN_GRID_SIZE};
-  SDL_FillRect(surface, &cell, CELL_COLOR);
+  SDL_FillRect(surface, &cell, color);
 }
 
 int** make_grid(int rows, int cols) {
@@ -39,18 +43,19 @@ int** make_grid(int rows, int cols) {
     printf("ERROR: Unable to allocate memory to grid!");
     exit(1);
   }
-  
+  return grid;
+}
+
+void backend_next_generation (int** grid, int rows, int cols) {
   for (int i = 0; i < rows; i++) {  
     for (int j = 0; j < cols; j++) grid[i][j] = rand() % 2;
   }
-
-  return grid;
 }
 
 void draw_conveys_game_of_life (int** grid, int rows, int cols, SDL_Surface* surface) {
   for(int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
-      if (grid[i][j]) draw_cell(surface, j, i);
+      (grid[i][j]) ? draw_cell(surface, j, i, CELL_COLOR) : draw_cell(surface, j, i, CELL_BLACK);
     }
   }
 }
@@ -74,13 +79,23 @@ int main() {
     int midX = cols/2, midY = rows/2;
     int** grid = make_grid(rows, cols);
     
-    draw_conveys_game_of_life(grid, rows, cols, surface);
+    int simulation_running = 1;
+    SDL_Event event;
+    
+    while (simulation_running) {
+      while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) simulation_running = 0;
+      }
+      
+      backend_next_generation(grid, rows, cols);
+      draw_conveys_game_of_life(grid, rows, cols, surface);
 
-    SDL_UpdateWindowSurface(main_window);    
-    SDL_Delay(5000);
+      SDL_UpdateWindowSurface(main_window);    
+      SDL_Delay(SIMULATION_SPEED);
+    }
+
     SDL_DestroyWindow(main_window);
     SDL_Quit(); 
-
     delete_grid(grid, rows);
     return 0;
 }

@@ -1,10 +1,14 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_timer.h>
+#include <SDL2/SDL_video.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAIN_WINDOW_WIDTH 900
-#define MAIN_WINDOW_HEIGHT 600
+#define MAIN_WINDOW_WIDTH 1920
+#define MAIN_WINDOW_HEIGHT 1080
 #define COLOR_BLACK 0x00000000
 #define COLOR_WHITE 0xffffffff
 #define COLOR_GRAY 0x0f0f0f0f
@@ -59,10 +63,23 @@ int count_neighbours(int** grid, int rows, int cols, int y, int x) {
   return alive;
 
 }
+
+void initialize_blank_grid  (int** grid, int rows, int cols) {
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) grid[i][j] = 0;
+  }
+}
+
 void initialize_random_grid (int** grid, int rows, int cols) {
   for (int i = 0; i < rows; i++) {  
     for (int j = 0; j < cols; j++) grid[i][j] = rand() % 2;
   }
+}
+
+void toggle_cell (int** grid, Sint32 x, Sint32 y, int rows, int cols) {
+  int clicked_Col = x/(CELL_SIZE);
+  int clicked_Row = y/(CELL_SIZE);
+  grid[clicked_Row][clicked_Col] = !grid[clicked_Row][clicked_Col];
 }
 
 void backend_next_generation (int** grid, int rows, int cols) {
@@ -85,6 +102,7 @@ void backend_next_generation (int** grid, int rows, int cols) {
   for(int i = 0; i < rows; i++) free(temp_grid[i]);
   free(temp_grid);
 }
+
 void draw_conveys_game_of_life (int** grid, int rows, int cols, SDL_Surface* surface) {
   for(int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
@@ -111,21 +129,67 @@ int main() {
     
     int midX = cols/2, midY = rows/2;
     int** grid = make_grid(rows, cols);
-    initialize_random_grid(grid, rows, cols);
+
+    initialize_blank_grid(grid, rows, cols);
+    draw_conveys_game_of_life(grid, rows, cols, surface);
+    SDL_UpdateWindowSurface(main_window);
     
-    int simulation_running = 1;
+    int simulation_loop = 1, simulation_paused = 1;
     SDL_Event event;
     
-    while (simulation_running) {
+    while (simulation_loop) {
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) simulation_running = 0;
+        switch (event.type) {
+          case SDL_QUIT:
+            simulation_loop = 0;
+            break;
+
+          case SDL_MOUSEBUTTONDOWN:
+            if (!simulation_paused) simulation_paused = 1;
+            toggle_cell(grid, event.button.x, event.button.y, rows, cols);
+            draw_conveys_game_of_life(grid, rows, cols, surface);
+            SDL_UpdateWindowSurface(main_window);
+            break;
+          
+          case SDL_KEYDOWN:
+            switch (event.key.keysym.sym) {
+              case SDLK_ESCAPE:
+                simulation_loop = 0;
+                break;
+
+              case SDLK_SPACE:
+                simulation_paused = ! simulation_paused;
+                break;
+
+              case SDLK_RETURN:
+                initialize_blank_grid(grid, rows, cols);
+                draw_conveys_game_of_life(grid, rows, cols, surface);
+                SDL_UpdateWindowSurface(main_window);
+                break;
+
+              case SDLK_r:
+                initialize_random_grid(grid, rows, cols);
+                draw_conveys_game_of_life(grid, rows, cols, surface);
+                SDL_UpdateWindowSurface(main_window);
+                break;
+              
+              case SDLK_e:
+                if (!simulation_paused) simulation_paused = 1;
+                backend_next_generation(grid, rows, cols);
+                draw_conveys_game_of_life(grid, rows, cols, surface);
+                SDL_UpdateWindowSurface(main_window);
+                break;
+            }
+        }
       }
+      
+      if (!simulation_paused) {
+        draw_conveys_game_of_life(grid, rows, cols, surface);
+        backend_next_generation(grid, rows, cols);
 
-      draw_conveys_game_of_life(grid, rows, cols, surface);
-      backend_next_generation(grid, rows, cols);
-
-      SDL_UpdateWindowSurface(main_window);    
-      SDL_Delay(SIMULATION_SPEED);
+        SDL_UpdateWindowSurface(main_window);    
+        SDL_Delay(SIMULATION_SPEED);
+      } else SDL_Delay(SIMULATION_SPEED * 2);
     }
 
     SDL_DestroyWindow(main_window);

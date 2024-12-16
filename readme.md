@@ -2,6 +2,8 @@
 
 A simple implementation of Conway's Game of Life in C using SDL2 for graphics rendering.
 
+**Check [releases](https://github.com/47seconds/ConveysGameOfLife/releases/) page to download pre-compiled binaries and run the program.**
+
 ## Table of Contents
 - [Requirements](#requirements)
 - [Installation](#installation)

@@ -1,9 +1,4 @@
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_keycode.h>
-#include <SDL2/SDL_stdinc.h>
-#include <SDL2/SDL_timer.h>
-#include <SDL2/SDL_video.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -116,7 +111,7 @@ void delete_grid(int** grid, int rows) {
   free(grid);
 }
 
-int main() {
+int main(int argc, char** argv) {
     printf("Conway's Game of Life\n");
     SDL_Init(SDL_INIT_VIDEO);
 
